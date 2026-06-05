@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import partyDataRaw from './data/party_data.json';
 
 function App() {
   // State for filters
@@ -39,23 +40,18 @@ function App() {
   const [availableDestinations, setAvailableDestinations] = useState([]);
   const [availableOperators, setAvailableOperators] = useState([]);
 
-  // Load JSON data
+  // Load JSON data directly from import
   useEffect(() => {
-    fetch('/data/party_data.json')
-      .then(response => response.json())
-      .then(data => {
-        const partyData = data.party_det || data;
-        setAllData(partyData);
-        
-        const sources = [...new Set(partyData.map(item => item.src))].filter(Boolean).sort();
-        const destinations = [...new Set(partyData.map(item => item.dest))].filter(Boolean).sort();
-        const operators = [...new Set(partyData.map(item => item.contractor_name))].filter(Boolean).sort();
-        
-        setAvailableSources(sources);
-        setAvailableDestinations(destinations);
-        setAvailableOperators(operators);
-      })
-      .catch(err => console.error('Error loading data:', err));
+    const partyData = partyDataRaw.party_det || partyDataRaw;
+    setAllData(partyData);
+    
+    const sources = [...new Set(partyData.map(item => item.src))].filter(Boolean).sort();
+    const destinations = [...new Set(partyData.map(item => item.dest))].filter(Boolean).sort();
+    const operators = [...new Set(partyData.map(item => item.contractor_name))].filter(Boolean).sort();
+    
+    setAvailableSources(sources);
+    setAvailableDestinations(destinations);
+    setAvailableOperators(operators);
   }, []);
 
   // Check if source and destination are same
@@ -270,7 +266,7 @@ function App() {
 
   return (
     <div className="app">
-      {/* Logo Header - Simplified */}
+      {/* Simple Header */}
       <div className="simple-header">
         <div className="logo-icon">R</div>
         <div className="logo-text">
