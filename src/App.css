@@ -636,4 +636,33 @@ body {
   .logo-text h1 {
     font-size: 18px;
   }
+}/* Suggestions Header */
+.suggestions-header {
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7a8a;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Ensure dropdown shows all items */
+.suggestions {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  padding: 10px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f2f5;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.suggestion-item:hover {
+  background: #fef5f0;
+  color: #e85a2c;
 }

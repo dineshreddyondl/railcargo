@@ -8,15 +8,16 @@ function App() {
   const [destination, setDestination] = useState('');
   const [selectedOperator, setSelectedOperator] = useState('');
   
-  // State for dropdown suggestions
+  // State for filtered suggestions (for search as you type)
   const [sourceSuggestions, setSourceSuggestions] = useState([]);
   const [destSuggestions, setDestSuggestions] = useState([]);
   const [operatorSuggestions, setOperatorSuggestions] = useState([]);
   
-  // State for UI
-  const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
-  const [showDestSuggestions, setShowDestSuggestions] = useState(false);
-  const [showOperatorSuggestions, setShowOperatorSuggestions] = useState(false);
+  // State for UI - show/hide dropdowns
+  const [showSourceDropdown, setShowSourceDropdown] = useState(false);
+  const [showDestDropdown, setShowDestDropdown] = useState(false);
+  const [showOperatorDropdown, setShowOperatorDropdown] = useState(false);
+  
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -35,10 +36,10 @@ function App() {
   const destRef = useRef(null);
   const operatorRef = useRef(null);
   
-  // Available options for dropdowns
-  const [availableSources, setAvailableSources] = useState([]);
-  const [availableDestinations, setAvailableDestinations] = useState([]);
-  const [availableOperators, setAvailableOperators] = useState([]);
+  // Full lists for dropdowns
+  const [allSources, setAllSources] = useState([]);
+  const [allDestinations, setAllDestinations] = useState([]);
+  const [allOperators, setAllOperators] = useState([]);
 
   // Load JSON data directly from import
   useEffect(() => {
@@ -49,9 +50,14 @@ function App() {
     const destinations = [...new Set(partyData.map(item => item.dest))].filter(Boolean).sort();
     const operators = [...new Set(partyData.map(item => item.contractor_name))].filter(Boolean).sort();
     
-    setAvailableSources(sources);
-    setAvailableDestinations(destinations);
-    setAvailableOperators(operators);
+    setAllSources(sources);
+    setAllDestinations(destinations);
+    setAllOperators(operators);
+    
+    // Initialize suggestions with all items
+    setSourceSuggestions(sources);
+    setDestSuggestions(destinations);
+    setOperatorSuggestions(operators);
   }, []);
 
   // Check if source and destination are same
@@ -63,45 +69,41 @@ function App() {
     }
   }, [source, destination]);
 
-  // Filter suggestions based on input
+  // Filter source suggestions based on input
   useEffect(() => {
-    if (source.length > 0 && document.activeElement === sourceRef.current?.querySelector('input')) {
-      const filtered = availableSources.filter(s => 
-        s.toLowerCase().includes(source.toLowerCase()) && s !== source
+    if (source.length > 0) {
+      const filtered = allSources.filter(s => 
+        s.toLowerCase().includes(source.toLowerCase())
       );
-      setSourceSuggestions(filtered.slice(0, 10));
-      setShowSourceSuggestions(true);
+      setSourceSuggestions(filtered);
     } else {
-      setSourceSuggestions([]);
-      setShowSourceSuggestions(false);
+      setSourceSuggestions(allSources);
     }
-  }, [source, availableSources]);
+  }, [source, allSources]);
 
+  // Filter destination suggestions based on input
   useEffect(() => {
-    if (destination.length > 0 && document.activeElement === destRef.current?.querySelector('input')) {
-      const filtered = availableDestinations.filter(d => 
-        d.toLowerCase().includes(destination.toLowerCase()) && d !== destination
+    if (destination.length > 0) {
+      const filtered = allDestinations.filter(d => 
+        d.toLowerCase().includes(destination.toLowerCase())
       );
-      setDestSuggestions(filtered.slice(0, 10));
-      setShowDestSuggestions(true);
+      setDestSuggestions(filtered);
     } else {
-      setDestSuggestions([]);
-      setShowDestSuggestions(false);
+      setDestSuggestions(allDestinations);
     }
-  }, [destination, availableDestinations]);
+  }, [destination, allDestinations]);
 
+  // Filter operator suggestions based on input
   useEffect(() => {
-    if (selectedOperator.length > 0 && document.activeElement === operatorRef.current?.querySelector('input')) {
-      const filtered = availableOperators.filter(op => 
-        op.toLowerCase().includes(selectedOperator.toLowerCase()) && op !== selectedOperator
+    if (selectedOperator.length > 0) {
+      const filtered = allOperators.filter(op => 
+        op.toLowerCase().includes(selectedOperator.toLowerCase())
       );
-      setOperatorSuggestions(filtered.slice(0, 10));
-      setShowOperatorSuggestions(true);
+      setOperatorSuggestions(filtered);
     } else {
-      setOperatorSuggestions([]);
-      setShowOperatorSuggestions(false);
+      setOperatorSuggestions(allOperators);
     }
-  }, [selectedOperator, availableOperators]);
+  }, [selectedOperator, allOperators]);
 
   // Load operator data when operator is selected
   useEffect(() => {
@@ -184,39 +186,21 @@ function App() {
     setOperatorTrains([]);
     setOperatorRoutes([]);
     setOperatorTrips([]);
-    setSourceSuggestions([]);
-    setDestSuggestions([]);
-    setOperatorSuggestions([]);
-    setShowSourceSuggestions(false);
-    setShowDestSuggestions(false);
-    setShowOperatorSuggestions(false);
   };
 
   const selectSource = (station) => {
     setSource(station);
-    setShowSourceSuggestions(false);
-    setSourceSuggestions([]);
-    if (sourceRef.current) {
-      sourceRef.current.querySelector('input').blur();
-    }
+    setShowSourceDropdown(false);
   };
 
   const selectDestination = (station) => {
     setDestination(station);
-    setShowDestSuggestions(false);
-    setDestSuggestions([]);
-    if (destRef.current) {
-      destRef.current.querySelector('input').blur();
-    }
+    setShowDestDropdown(false);
   };
 
   const selectOperator = (operator) => {
     setSelectedOperator(operator);
-    setShowOperatorSuggestions(false);
-    setOperatorSuggestions([]);
-    if (operatorRef.current) {
-      operatorRef.current.querySelector('input').blur();
-    }
+    setShowOperatorDropdown(false);
   };
 
   const swapStations = () => {
@@ -225,44 +209,22 @@ function App() {
     setDestination(temp);
   };
 
-  const handleSourceFocus = () => {
-    if (source.length > 0) {
-      const filtered = availableSources.filter(s => 
-        s.toLowerCase().includes(source.toLowerCase()) && s !== source
-      );
-      setSourceSuggestions(filtered.slice(0, 10));
-      setShowSourceSuggestions(true);
-    } else {
-      setSourceSuggestions(availableSources.slice(0, 10));
-      setShowSourceSuggestions(true);
-    }
-  };
-
-  const handleDestFocus = () => {
-    if (destination.length > 0) {
-      const filtered = availableDestinations.filter(d => 
-        d.toLowerCase().includes(destination.toLowerCase()) && d !== destination
-      );
-      setDestSuggestions(filtered.slice(0, 10));
-      setShowDestSuggestions(true);
-    } else {
-      setDestSuggestions(availableDestinations.slice(0, 10));
-      setShowDestSuggestions(true);
-    }
-  };
-
-  const handleOperatorFocus = () => {
-    if (selectedOperator.length > 0) {
-      const filtered = availableOperators.filter(op => 
-        op.toLowerCase().includes(selectedOperator.toLowerCase()) && op !== selectedOperator
-      );
-      setOperatorSuggestions(filtered.slice(0, 10));
-      setShowOperatorSuggestions(true);
-    } else {
-      setOperatorSuggestions(availableOperators.slice(0, 10));
-      setShowOperatorSuggestions(true);
-    }
-  };
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sourceRef.current && !sourceRef.current.contains(event.target)) {
+        setShowSourceDropdown(false);
+      }
+      if (destRef.current && !destRef.current.contains(event.target)) {
+        setShowDestDropdown(false);
+      }
+      if (operatorRef.current && !operatorRef.current.contains(event.target)) {
+        setShowOperatorDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <div className="app">
@@ -316,11 +278,14 @@ function App() {
                         placeholder="Select source station"
                         value={source}
                         onChange={(e) => setSource(e.target.value.toUpperCase())}
-                        onFocus={handleSourceFocus}
+                        onFocus={() => setShowSourceDropdown(true)}
                         autoComplete="off"
                       />
-                      {showSourceSuggestions && sourceSuggestions.length > 0 && (
+                      {showSourceDropdown && sourceSuggestions.length > 0 && (
                         <div className="suggestions">
+                          <div className="suggestions-header">
+                            Showing {sourceSuggestions.length} stations
+                          </div>
                           {sourceSuggestions.map((station, idx) => (
                             <div key={idx} className="suggestion-item" onClick={() => selectSource(station)}>
                               {station}
@@ -343,11 +308,14 @@ function App() {
                         placeholder="Select destination station"
                         value={destination}
                         onChange={(e) => setDestination(e.target.value.toUpperCase())}
-                        onFocus={handleDestFocus}
+                        onFocus={() => setShowDestDropdown(true)}
                         autoComplete="off"
                       />
-                      {showDestSuggestions && destSuggestions.length > 0 && (
+                      {showDestDropdown && destSuggestions.length > 0 && (
                         <div className="suggestions">
+                          <div className="suggestions-header">
+                            Showing {destSuggestions.length} destinations
+                          </div>
                           {destSuggestions.map((station, idx) => (
                             <div key={idx} className="suggestion-item" onClick={() => selectDestination(station)}>
                               {station}
@@ -392,11 +360,14 @@ function App() {
                       placeholder="Type to search operator..."
                       value={selectedOperator}
                       onChange={(e) => setSelectedOperator(e.target.value)}
-                      onFocus={handleOperatorFocus}
+                      onFocus={() => setShowOperatorDropdown(true)}
                       autoComplete="off"
                     />
-                    {showOperatorSuggestions && operatorSuggestions.length > 0 && (
+                    {showOperatorDropdown && operatorSuggestions.length > 0 && (
                       <div className="suggestions">
+                        <div className="suggestions-header">
+                          Showing {operatorSuggestions.length} operators
+                        </div>
                         {operatorSuggestions.map((op, idx) => (
                           <div key={idx} className="suggestion-item" onClick={() => selectOperator(op)}>
                             {op}
