@@ -7,16 +7,19 @@ function App() {
   const [source, setSource] = useState('');
   const [destination, setDestination] = useState('');
   const [selectedOperator, setSelectedOperator] = useState('');
+  const [routeSource, setRouteSource] = useState('');
   
-  // State for filtered suggestions (for search as you type)
+  // State for filtered suggestions
   const [sourceSuggestions, setSourceSuggestions] = useState([]);
   const [destSuggestions, setDestSuggestions] = useState([]);
   const [operatorSuggestions, setOperatorSuggestions] = useState([]);
+  const [routeSourceSuggestions, setRouteSourceSuggestions] = useState([]);
   
   // State for UI - show/hide dropdowns
   const [showSourceDropdown, setShowSourceDropdown] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
   const [showOperatorDropdown, setShowOperatorDropdown] = useState(false);
+  const [showRouteSourceDropdown, setShowRouteSourceDropdown] = useState(false);
   
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,17 +34,22 @@ function App() {
   const [operatorTrips, setOperatorTrips] = useState([]);
   const [operatorSelected, setOperatorSelected] = useState(false);
   
+  // Route wise data
+  const [routeResults, setRouteResults] = useState([]);
+  const [routeSearched, setRouteSearched] = useState(false);
+  
   // Refs for dropdowns
   const sourceRef = useRef(null);
   const destRef = useRef(null);
   const operatorRef = useRef(null);
+  const routeSourceRef = useRef(null);
   
   // Full lists for dropdowns
   const [allSources, setAllSources] = useState([]);
   const [allDestinations, setAllDestinations] = useState([]);
   const [allOperators, setAllOperators] = useState([]);
 
-  // Load JSON data directly from import
+  // Load JSON data
   useEffect(() => {
     const partyData = partyDataRaw.party_det || partyDataRaw;
     setAllData(partyData);
@@ -54,10 +62,10 @@ function App() {
     setAllDestinations(destinations);
     setAllOperators(operators);
     
-    // Initialize suggestions with all items
     setSourceSuggestions(sources);
     setDestSuggestions(destinations);
     setOperatorSuggestions(operators);
+    setRouteSourceSuggestions(sources);
   }, []);
 
   // Check if source and destination are same
@@ -69,43 +77,44 @@ function App() {
     }
   }, [source, destination]);
 
-  // Filter source suggestions based on input
+  // Filter suggestions
   useEffect(() => {
     if (source.length > 0) {
-      const filtered = allSources.filter(s => 
-        s.toLowerCase().includes(source.toLowerCase())
-      );
+      const filtered = allSources.filter(s => s.toLowerCase().includes(source.toLowerCase()));
       setSourceSuggestions(filtered);
     } else {
       setSourceSuggestions(allSources);
     }
   }, [source, allSources]);
 
-  // Filter destination suggestions based on input
   useEffect(() => {
     if (destination.length > 0) {
-      const filtered = allDestinations.filter(d => 
-        d.toLowerCase().includes(destination.toLowerCase())
-      );
+      const filtered = allDestinations.filter(d => d.toLowerCase().includes(destination.toLowerCase()));
       setDestSuggestions(filtered);
     } else {
       setDestSuggestions(allDestinations);
     }
   }, [destination, allDestinations]);
 
-  // Filter operator suggestions based on input
   useEffect(() => {
     if (selectedOperator.length > 0) {
-      const filtered = allOperators.filter(op => 
-        op.toLowerCase().includes(selectedOperator.toLowerCase())
-      );
+      const filtered = allOperators.filter(op => op.toLowerCase().includes(selectedOperator.toLowerCase()));
       setOperatorSuggestions(filtered);
     } else {
       setOperatorSuggestions(allOperators);
     }
   }, [selectedOperator, allOperators]);
 
-  // Load operator data when operator is selected
+  useEffect(() => {
+    if (routeSource.length > 0) {
+      const filtered = allSources.filter(s => s.toLowerCase().includes(routeSource.toLowerCase()));
+      setRouteSourceSuggestions(filtered);
+    } else {
+      setRouteSourceSuggestions(allSources);
+    }
+  }, [routeSource, allSources]);
+
+  // Load operator data
   useEffect(() => {
     if (selectedOperator && activeMode === 'operator' && allData.length > 0) {
       const operatorData = allData.filter(item => 
@@ -146,7 +155,6 @@ function App() {
           details: routes[route].details
         }));
         setOperatorRoutes(routeList);
-        
         setOperatorTrips(operatorData);
         setOperatorSelected(true);
       }
@@ -170,8 +178,39 @@ function App() {
         item.src?.toLowerCase() === source.toLowerCase() &&
         item.dest?.toLowerCase() === destination.toLowerCase()
       );
-      
       setResults(filtered);
+      setLoading(false);
+    }, 300);
+  };
+
+  const handleRouteSearch = () => {
+    if (!routeSource) return;
+    
+    setLoading(true);
+    setRouteSearched(true);
+    
+    setTimeout(() => {
+      const routesFromSource = allData.filter(item => 
+        item.src?.toLowerCase() === routeSource.toLowerCase()
+      );
+      
+      const destinationMap = new Map();
+      routesFromSource.forEach(item => {
+        const dest = item.dest;
+        if (!destinationMap.has(dest)) {
+          destinationMap.set(dest, []);
+        }
+        destinationMap.get(dest).push(item);
+      });
+      
+      const routeGroups = Array.from(destinationMap.entries()).map(([destination, providers]) => ({
+        destination: destination,
+        providers: providers,
+        trainNumbers: [...new Set(providers.map(p => p.train_no))],
+        providerCount: providers.length
+      })).sort((a, b) => a.destination.localeCompare(b.destination));
+      
+      setRouteResults(routeGroups);
       setLoading(false);
     }, 300);
   };
@@ -180,8 +219,11 @@ function App() {
     setSource('');
     setDestination('');
     setSelectedOperator('');
+    setRouteSource('');
     setResults([]);
     setSearched(false);
+    setRouteResults([]);
+    setRouteSearched(false);
     setOperatorSelected(false);
     setOperatorTrains([]);
     setOperatorRoutes([]);
@@ -203,6 +245,11 @@ function App() {
     setShowOperatorDropdown(false);
   };
 
+  const selectRouteSource = (station) => {
+    setRouteSource(station);
+    setShowRouteSourceDropdown(false);
+  };
+
   const swapStations = () => {
     const temp = source;
     setSource(destination);
@@ -212,15 +259,10 @@ function App() {
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (sourceRef.current && !sourceRef.current.contains(event.target)) {
-        setShowSourceDropdown(false);
-      }
-      if (destRef.current && !destRef.current.contains(event.target)) {
-        setShowDestDropdown(false);
-      }
-      if (operatorRef.current && !operatorRef.current.contains(event.target)) {
-        setShowOperatorDropdown(false);
-      }
+      if (sourceRef.current && !sourceRef.current.contains(event.target)) setShowSourceDropdown(false);
+      if (destRef.current && !destRef.current.contains(event.target)) setShowDestDropdown(false);
+      if (operatorRef.current && !operatorRef.current.contains(event.target)) setShowOperatorDropdown(false);
+      if (routeSourceRef.current && !routeSourceRef.current.contains(event.target)) setShowRouteSourceDropdown(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -237,28 +279,44 @@ function App() {
         </div>
       </div>
 
-      {/* Mode Switch */}
+      {/* Mode Switch - 3 options */}
       <div className="mode-switch-container">
         <button 
-          className={`mode-switch-btn ${activeMode === 'quick' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveMode('quick');
-            setOperatorSelected(false);
-            setResults([]);
-            setSearched(false);
+          className={`mode-switch-btn ${activeMode === 'quick' ? 'active' : ''}`} 
+          onClick={() => { 
+            setActiveMode('quick'); 
+            setOperatorSelected(false); 
+            setResults([]); 
+            setSearched(false); 
+            setRouteResults([]); 
+            setRouteSearched(false); 
           }}
         >
           Quick Lookup
         </button>
         <button 
-          className={`mode-switch-btn ${activeMode === 'operator' ? 'active' : ''}`}
-          onClick={() => {
-            setActiveMode('operator');
-            setResults([]);
-            setSearched(false);
+          className={`mode-switch-btn ${activeMode === 'operator' ? 'active' : ''}`} 
+          onClick={() => { 
+            setActiveMode('operator'); 
+            setResults([]); 
+            setSearched(false); 
+            setRouteResults([]); 
+            setRouteSearched(false); 
           }}
         >
           Operator Wise
+        </button>
+        <button 
+          className={`mode-switch-btn ${activeMode === 'route' ? 'active' : ''}`} 
+          onClick={() => { 
+            setActiveMode('route'); 
+            setResults([]); 
+            setSearched(false); 
+            setRouteResults([]); 
+            setRouteSearched(false); 
+          }}
+        >
+          Route Wise
         </button>
       </div>
 
@@ -266,7 +324,8 @@ function App() {
       <div className="search-wrapper">
         <div className="search-container">
           <div className="search-form">
-            {/* Quick Lookup Mode */}
+            
+            {/* QUICK LOOKUP MODE */}
             {activeMode === 'quick' && (
               <>
                 <div className="stations-row">
@@ -283,9 +342,7 @@ function App() {
                       />
                       {showSourceDropdown && sourceSuggestions.length > 0 && (
                         <div className="suggestions">
-                          <div className="suggestions-header">
-                            Showing {sourceSuggestions.length} stations
-                          </div>
+                          <div className="suggestions-header">Showing {sourceSuggestions.length} stations</div>
                           {sourceSuggestions.map((station, idx) => (
                             <div key={idx} className="suggestion-item" onClick={() => selectSource(station)}>
                               {station}
@@ -313,9 +370,7 @@ function App() {
                       />
                       {showDestDropdown && destSuggestions.length > 0 && (
                         <div className="suggestions">
-                          <div className="suggestions-header">
-                            Showing {destSuggestions.length} destinations
-                          </div>
+                          <div className="suggestions-header">Showing {destSuggestions.length} destinations</div>
                           {destSuggestions.map((station, idx) => (
                             <div key={idx} className="suggestion-item" onClick={() => selectDestination(station)}>
                               {station}
@@ -348,7 +403,7 @@ function App() {
               </>
             )}
 
-            {/* Operator Wise Mode */}
+            {/* OPERATOR WISE MODE */}
             {activeMode === 'operator' && (
               <>
                 <div className="operator-filter">
@@ -365,9 +420,7 @@ function App() {
                     />
                     {showOperatorDropdown && operatorSuggestions.length > 0 && (
                       <div className="suggestions">
-                        <div className="suggestions-header">
-                          Showing {operatorSuggestions.length} operators
-                        </div>
+                        <div className="suggestions-header">Showing {operatorSuggestions.length} operators</div>
                         {operatorSuggestions.map((op, idx) => (
                           <div key={idx} className="suggestion-item" onClick={() => selectOperator(op)}>
                             {op}
@@ -377,7 +430,6 @@ function App() {
                     )}
                   </div>
                 </div>
-
                 <div className="action-buttons">
                   <button className="btn-clear" onClick={handleClear}>
                     CLEAR
@@ -385,11 +437,54 @@ function App() {
                 </div>
               </>
             )}
+
+            {/* ROUTE WISE MODE */}
+            {activeMode === 'route' && (
+              <>
+                <div className="route-filter">
+                  <label className="route-label">SELECT SOURCE STATION</label>
+                  <div className="input-box" ref={routeSourceRef}>
+                    <input
+                      type="text"
+                      className="route-input"
+                      placeholder="Type to search station..."
+                      value={routeSource}
+                      onChange={(e) => setRouteSource(e.target.value.toUpperCase())}
+                      onFocus={() => setShowRouteSourceDropdown(true)}
+                      autoComplete="off"
+                    />
+                    {showRouteSourceDropdown && routeSourceSuggestions.length > 0 && (
+                      <div className="suggestions">
+                        <div className="suggestions-header">Showing {routeSourceSuggestions.length} stations</div>
+                        {routeSourceSuggestions.map((station, idx) => (
+                          <div key={idx} className="suggestion-item" onClick={() => selectRouteSource(station)}>
+                            {station}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="action-buttons">
+                  <button 
+                    className="btn-search" 
+                    onClick={handleRouteSearch} 
+                    disabled={loading || !routeSource}
+                  >
+                    SHOW ALL ROUTES
+                  </button>
+                  <button className="btn-clear" onClick={handleClear}>
+                    CLEAR
+                  </button>
+                </div>
+              </>
+            )}
+
           </div>
         </div>
       </div>
 
-      {/* Results Section - Quick Lookup */}
+      {/* RESULTS - QUICK LOOKUP */}
       {activeMode === 'quick' && (
         <div className="results-area">
           {loading && (
@@ -448,7 +543,7 @@ function App() {
         </div>
       )}
 
-      {/* Results Section - Operator Wise */}
+      {/* RESULTS - OPERATOR WISE */}
       {activeMode === 'operator' && operatorSelected && (
         <div className="results-area">
           <div className="operator-header">
@@ -506,6 +601,69 @@ function App() {
           <div className="empty-icon">🏢</div>
           <h4>Select an operator</h4>
           <p>Type and select an operator to see their trains, routes, and trip details</p>
+        </div>
+      )}
+
+      {/* RESULTS - ROUTE WISE */}
+      {activeMode === 'route' && (
+        <div className="results-area">
+          {loading && (
+            <div className="loading-state">
+              <div className="loading-spinner"></div>
+              <p>Finding routes from {routeSource}...</p>
+            </div>
+          )}
+
+          {!loading && routeSearched && routeResults.length > 0 && (
+            <>
+              <div className="results-header">
+                <h3>Routes from {routeSource}</h3>
+                <div className="results-count">
+                  {routeResults.length} destinations | {routeResults.reduce((sum, r) => sum + r.providerCount, 0)} providers
+                </div>
+              </div>
+
+              {routeResults.map((route, idx) => (
+                <div key={idx} className="route-card">
+                  <div className="route-header">
+                    <div className="route-dest">→ {route.destination}</div>
+                    <div className="route-stats">
+                      {route.providerCount} providers | Train: {route.trainNumbers.join(', ')}
+                    </div>
+                  </div>
+                  <div className="providers-list">
+                    {route.providers.map((provider, pIdx) => (
+                      <div key={pIdx} className="provider-row">
+                        <div className="provider-info">
+                          <div className="provider-name">
+                            {provider.contractor_name}
+                            <span className="comp-badge">{provider.comp}</span>
+                          </div>
+                          <div className="provider-details">
+                            <span>🚆 Train: <strong>{provider.train_no}</strong></span>
+                            <span>📦 Capacity: <strong>{provider.capacity} tons</strong></span>
+                          </div>
+                        </div>
+                        <div className="contact-info">
+                          <div>👤 {provider.name}</div>
+                          <div>📞 <a href={`tel:+91${provider.mobile}`}>+91 {provider.mobile}</a></div>
+                          <div>✉️ <a href={`mailto:${provider.emailid}`}>{provider.emailid}</a></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {!loading && routeSearched && routeResults.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">🗺️</div>
+              <h4>No routes found</h4>
+              <p>No providers operate from this station</p>
+            </div>
+          )}
         </div>
       )}
     </div>
