@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import partyDataRaw from './data/party_data.json';
+import LiveRoutes from './components/LiveRoutes';
 
 function App() {
   // State for filters
@@ -279,7 +280,7 @@ function App() {
         </div>
       </div>
 
-      {/* Mode Switch - 3 options */}
+      {/* Mode Switch - 4 options */}
       <div className="mode-switch-container">
         <button 
           className={`mode-switch-btn ${activeMode === 'quick' ? 'active' : ''}`} 
@@ -317,6 +318,19 @@ function App() {
           }}
         >
           Route Wise
+        </button>
+        <button 
+          className={`mode-switch-btn ${activeMode === 'live' ? 'active' : ''}`} 
+          onClick={() => { 
+            setActiveMode('live'); 
+            setResults([]); 
+            setSearched(false); 
+            setRouteResults([]); 
+            setRouteSearched(false); 
+            setOperatorSelected(false);
+          }}
+        >
+          Live Routes
         </button>
       </div>
 
@@ -666,6 +680,9 @@ function App() {
           )}
         </div>
       )}
+
+      {/* RESULTS - LIVE ROUTES */}
+      {activeMode === 'live' && <LiveRoutes />}
     </div>
   );
 }

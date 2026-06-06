@@ -5,19 +5,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    open: true
-  },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
       }
     }
   },
-  // Ensure JSON files are handled correctly
-  json: {
-    stringify: false
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets'
   }
 })
