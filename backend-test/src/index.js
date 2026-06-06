@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS for all origins (allow Railway frontend to connect)
+// CORS for all origins
 app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:3000',
